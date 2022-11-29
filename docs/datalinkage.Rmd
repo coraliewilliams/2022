@@ -1,0 +1,141 @@
+---
+title: "Data linkage"
+author: "Coralie Williams"
+output:
+  html_document:
+    code_folding: show
+    toc: yes
+    toc_float: yes
+    toc_collapsed: yes
+    toc_depth: 3
+    theme: cerulean
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Email from the 22/11/2022
+
+------------------------------------------------------------------------
+
+#### Problem 1
+
+*In a nutshell, I am trying to create a new variable based on another one in my data frame. E.g. an ethnicity_group variable that is a value of 1 if the pre-existing variable Ethnicity is North African, 2 if North East Asian, 3 if North West European etc.*
+
+------------------------------------------------------------------------
+
+For demonstration, the following generates a dataframe of 90 observations/rows with 9 different types of 'fake' ethnicities:
+
+```{r fakedata}
+# Generate fake data (maded up ethnicities)
+ethnicity_types <- c("NorthAfrican", "NorthEastAsian", "NorthWestEuropean",
+               "SouthAfrican", "SouthEastAsian", "SouthWestEuropean",
+               "WestAfrican", "WestAsian", "EastEuropean")
+
+# Repeat the 9 ethnicities 10 times
+ethnicity <- rep(ethnicity_types, 10)
+
+# Save as a dataframe
+dat <- as.data.frame(ethnicity)
+```
+
+First step, check and make sure the ethnicity variable is a factor:
+
+```{r factor_var}
+# Save ethnicity variable as a factor variable
+dat$ethnicity <- as.factor(dat$ethnicity)
+```
+
+Derived the new variable `ethnicity_group` using the `as.numeric` function.
+
+```{r ethn_group}
+# Derived new variable "ethnicity_group" that represents each ethnicity group as a number
+dat$ethnicity_group <- as.numeric(dat$ethnicity)
+dat$ethnicity_group
+```
+
+Then obtain a summary output table of the correspondence between each ethnicity and number associated to it.
+
+```{r}
+# View the correspondence between each ethnicity and number
+cbind(levels(dat$ethnicity), levels(as.factor(dat$ethnicity_group)))
+```
+
+------------------------------------------------------------------------
+
+#### Problem 2
+
+*Also trying to create a variable that inserts a date from one column in the data frame, depending on a value in another column. i.e. I have duplicate records because some people have 5 intervention dates. I want to create variables for intervention_date, intervention_date2, intervention_date3 etc. Managed to create an intervention_seq variable but no luck from there!*
+
+------------------------------------------------------------------------
+
+```{r, message=FALSE}
+# Load packages to read csv file and view tables in a nice format
+library(knitr)
+library(readr)
+
+# Read example dataset
+exdat <- read_csv("data/example.csv")
+
+### view output table
+kable(exdat)
+```
+
+Use `pivot_wider` function from `tidyr` package to obtain table that has unique `PPN` variable values for each intervention date and type in columns:
+
+-   `id_cols`: variable that uniquely identifies
+-   `names_from`: variables that you use to get the columns
+-   `values_from`: variables that will be used to get the cell values from
+
+```{r, message=FALSE}
+# Load tidyr package
+library(tidyr)
+
+# Obtain new table 
+exdat_new <- pivot_wider(exdat, 
+                         id_cols=c(PPN),
+                         names_from=intervention_seq,
+                         values_from=c(Intervention_Date, Intervention_Type))
+
+### view output table
+kable(exdat_new)
+```
+
+------------------------------------------------------------------------
+
+### Email from the 28/11/2022
+
+#### Change empty 'string' to missing value NA in R
+
+After reading in dataset format variables so that all empty spaces are represented as NA's. Do this before changing any variable into a factor.
+
+```{r, message=F}
+# Generate fake data including empty strings
+ethnicity_types <- c("NorthAfrican", "NorthEastAsian", "NorthWestEuropean",
+               "SouthAfrican", "SouthEastAsian", "SouthWestEuropean",
+               "WestAfrican", "WestAsian", "EastEuropean", "")
+
+# repeat each character 10 times
+ethnicity <- rep(ethnicity_types, 10)
+
+# Save as a dataframe
+dat <- as.data.frame(ethnicity)
+
+# Replace empty strings into NA
+library(dplyr)
+dat <- dat %>% 
+  mutate(ethnicity=ifelse(ethnicity=="",NA,ethnicity))
+
+```
+
+#### Appending additional variables to dataframe when using pivot_wider
+
+If we want to add more variables that identify each observation this can be done by using the "id_cols" argument.
+
+For example, if we would like to add "DOB" and "Gender" variables to the example above:
+
+`exdat_new <- pivot_wider(exdat, id_cols=c(PPN, DOB, Gender), names_from=intervention_seq, values_from=c(Intervention_Date, Intervention_Type))`
